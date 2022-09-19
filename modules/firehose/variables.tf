@@ -36,3 +36,8 @@ variable "content_encoding" {
   type        = string
   default = "GZIP"
 }
+
+variable "s3_access_log_bucket" {
+  description = "S3 Access Log Bucket ID"
+  type        = string
+}

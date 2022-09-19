@@ -89,6 +89,19 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "failed" {
   }
 }
 
+resource "aws_s3_bucket_logging" "failed" {
+  bucket = aws_s3_bucket.failed.id
+  target_bucket = var.s3_access_log_bucket
+  target_prefix = "logs/"
+}
+
+resource "aws_s3_bucket_versioning" "failed" {
+  bucket = aws_s3_bucket.failed.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "failed" {
   bucket = aws_s3_bucket.failed.id
 

@@ -1,22 +1,21 @@
+data "aws_iam_policy_document" "firehose_role" {
+  statement {
+    actions = [
+      "sts:AssumeRole"
+    ]
+    principals {
+      type        = "Service"
+      identifiers = ["firehose.amazonaws.com"]
+    }
+  }
+}
+
+
 resource "aws_iam_role" "firehose_role" {
   name        = "${var.name}-firehose-role"
   description = "IAM Role for Kinesis Firehose"
 
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "firehose.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
+  assume_role_policy = data.aws_iam_policy_document.firehose_role.json
 }
 
 data "aws_region" "current" {}
@@ -97,6 +96,69 @@ resource "aws_iam_role_policy" "metrics_producer_role" {
   policy = data.aws_iam_policy_document.metrics_producer_role.json
 }
 
+data "aws_caller_identity" "current" {}
+
+resource "aws_kms_key" "failed_access" {
+  description         = "${var.name}-failed"
+  enable_key_rotation = true
+  policy              = data.aws_iam_policy_document.failed_access.json
+}
+
+data "aws_iam_policy_document" "failed_access" {
+  statement {
+    sid = "CMKOwnerPolicy"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_s3_bucket" "failed_access" {
+  bucket = "${var.name}-failed-access"
+}
+
+resource "aws_s3_bucket_logging" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.id
+  target_bucket = aws_s3_bucket.failed_access.id
+  target_prefix = "logs/"
+}
+
+resource "aws_s3_bucket_acl" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.bucket
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.failed_access.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+resource "aws_s3_bucket_versioning" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 module "firehose_logs" {
   source = "./modules/firehose"
   name = "${var.name}-logs"
@@ -104,6 +166,8 @@ module "firehose_logs" {
 
   datadog_endpoint = var.datadog_logs_endpoint
   datadog_access_key = var.datadog_access_key
+
+  s3_access_log_bucket = aws_s3_bucket.failed_access.id
 
   buffering_interval = var.firehose_logs_buffering_interval
   buffering_size = var.firehose_logs_buffering_size
@@ -119,6 +183,8 @@ module "firehose_metrics" {
 
   datadog_endpoint = var.datadog_metrics_endpoint
   datadog_access_key = var.datadog_access_key
+
+  s3_access_log_bucket = aws_s3_bucket.failed_access.id
 
   buffering_interval = var.firehose_metrics_buffering_interval
   buffering_size = var.firehose_metrics_buffering_size
