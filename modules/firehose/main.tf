@@ -71,7 +71,7 @@ data "aws_iam_policy_document" "failed" {
 }
 
 resource "aws_s3_bucket" "failed" {
-  bucket = "${var.name}-failed"
+  bucket = "${data.aws_caller_identity.current.account_id}-${var.name}-failed"
 }
 
 resource "aws_s3_bucket_acl" "failed" {

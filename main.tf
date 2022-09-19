@@ -119,7 +119,7 @@ data "aws_iam_policy_document" "failed_access" {
 }
 
 resource "aws_s3_bucket" "failed_access" {
-  bucket = "${var.name}-failed-access"
+  bucket = "${data.aws_caller_identity.current.account_id}-${var.name}-failed-access"
 }
 
 resource "aws_s3_bucket_logging" "failed_access" {
