@@ -89,6 +89,23 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "failed" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "failed" {
+  bucket = aws_s3_bucket.failed.id
+
+  rule {
+    id     = "delete"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = var.s3_retention_days
+    }
+
+    expiration {
+      days = var.s3_retention_days
+    }
+  }
+}
+
 resource "aws_s3_bucket_logging" "failed" {
   bucket = aws_s3_bucket.failed.id
   target_bucket = var.s3_access_log_bucket

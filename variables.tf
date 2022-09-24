@@ -84,3 +84,21 @@ variable "firehose_metrics_s3_encryption_key_arn" {
   type        = string
   default = null
 }
+
+variable "s3_metrics_failed_retention_days" {
+  description = "S3 Metrics Failed Bucket Retention in Days"
+  type        = number
+  default = 14
+}
+
+variable "s3_logs_failed_retention_days" {
+  description = "S3 Logs Failed Bucket Retention in Days"
+  type        = number
+  default = 14
+}
+
+variable "s3_access_logs_retention_days" {
+  description = "S3 Failed Buckets Access Logs Retention in Days"
+  type        = number
+  default = 1
+}

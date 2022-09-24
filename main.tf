@@ -20,7 +20,6 @@ resource "aws_iam_role" "firehose_role" {
 
 data "aws_region" "current" {}
 
-
 # Logs Producer
 data "aws_iam_policy_document" "logs_producer_role" {
   statement {
@@ -122,6 +121,24 @@ resource "aws_s3_bucket" "failed_access" {
   bucket = "${data.aws_caller_identity.current.account_id}-${var.name}-failed-access"
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "failed_access" {
+  bucket = aws_s3_bucket.failed_access.id
+
+  rule {
+    id     = "delete"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = var.s3_access_logs_retention_days
+    }
+
+    expiration {
+      days = var.s3_access_logs_retention_days
+    }
+  }
+}
+
+
 resource "aws_s3_bucket_logging" "failed_access" {
   bucket = aws_s3_bucket.failed_access.id
   target_bucket = aws_s3_bucket.failed_access.id
@@ -174,6 +191,8 @@ module "firehose_logs" {
   content_encoding = var.content_encoding
 
   role_arn = aws_iam_role.firehose_role.arn
+
+  s3_retention_days = var.s3_logs_failed_retention_days
 }
 
 module "firehose_metrics" {
@@ -191,4 +210,5 @@ module "firehose_metrics" {
   content_encoding = var.content_encoding
 
   role_arn = aws_iam_role.firehose_role.arn
+  s3_retention_days = var.s3_metrics_failed_retention_days
 }

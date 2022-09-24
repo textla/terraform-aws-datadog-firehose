@@ -41,3 +41,9 @@ variable "s3_access_log_bucket" {
   description = "S3 Access Log Bucket ID"
   type        = string
 }
+
+variable "s3_retention_days" {
+  description = "S3 Retention in Days"
+  type        = number
+  default = 1
+}
