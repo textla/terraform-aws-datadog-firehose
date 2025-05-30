@@ -147,11 +147,6 @@ resource "aws_s3_bucket_logging" "failed_access" {
   target_prefix = "logs/"
 }
 
-resource "aws_s3_bucket_acl" "failed_access" {
-  bucket = aws_s3_bucket.failed_access.id
-  acl    = "private"
-}
-
 resource "aws_s3_bucket_server_side_encryption_configuration" "failed_access" {
   bucket = aws_s3_bucket.failed_access.bucket
   rule {
