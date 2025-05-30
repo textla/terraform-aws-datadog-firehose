@@ -30,11 +30,6 @@ resource "aws_kinesis_firehose_delivery_stream" "kinesis_firehose_stream_logs" {
     key_arn = aws_kms_key.stream.arn
   }
 
-  s3_configuration {
-    role_arn   = var.role_arn
-    bucket_arn = aws_s3_bucket.failed.arn
-  }
-
   http_endpoint_configuration {
     url                = var.datadog_endpoint
     name               = "Datadog"
@@ -43,6 +38,11 @@ resource "aws_kinesis_firehose_delivery_stream" "kinesis_firehose_stream_logs" {
     buffering_interval = var.buffering_interval
     role_arn           = var.role_arn
     s3_backup_mode     = "FailedDataOnly"
+
+    s3_configuration {
+      role_arn   = var.role_arn
+      bucket_arn = aws_s3_bucket.failed.arn
+    }
 
     request_configuration {
       content_encoding = var.content_encoding
