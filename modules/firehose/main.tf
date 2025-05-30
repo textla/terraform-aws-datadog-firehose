@@ -74,11 +74,6 @@ resource "aws_s3_bucket" "failed" {
   bucket = "${data.aws_caller_identity.current.account_id}-${var.name}-failed"
 }
 
-resource "aws_s3_bucket_acl" "failed" {
-  bucket = aws_s3_bucket.failed.id
-  acl    = "private"
-}
-
 resource "aws_s3_bucket_server_side_encryption_configuration" "failed" {
   bucket = aws_s3_bucket.failed.bucket
   rule {
