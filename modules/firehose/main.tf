@@ -25,9 +25,9 @@ resource "aws_kinesis_firehose_delivery_stream" "kinesis_firehose_stream_logs" {
   destination = "http_endpoint"
 
   server_side_encryption {
-    enabled = true
+    enabled  = true
     key_type = "CUSTOMER_MANAGED_CMK"
-    key_arn = aws_kms_key.stream.arn
+    key_arn  = aws_kms_key.stream.arn
   }
 
   http_endpoint_configuration {
@@ -109,7 +109,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed" {
 }
 
 resource "aws_s3_bucket_logging" "failed" {
-  bucket = aws_s3_bucket.failed.id
+  bucket        = aws_s3_bucket.failed.id
   target_bucket = var.s3_access_log_bucket
   target_prefix = "logs/"
 }
