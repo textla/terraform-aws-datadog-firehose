@@ -96,6 +96,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed" {
     id     = "delete"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_expiration {
       noncurrent_days = var.s3_retention_days
     }

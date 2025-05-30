@@ -128,6 +128,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed_access" {
     id     = "delete"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_expiration {
       noncurrent_days = var.s3_access_logs_retention_days
     }
