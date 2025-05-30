@@ -45,13 +45,13 @@ data "aws_iam_policy_document" "logs_producer_role_assume" {
 }
 
 resource "aws_iam_role" "logs_producer_role" {
-  count = var.firehose_logs ? 1 : 0
+  count              = var.firehose_logs ? 1 : 0
   name               = "${var.name}-logs-producer-role"
   assume_role_policy = data.aws_iam_policy_document.logs_producer_role_assume.json
 }
 
 resource "aws_iam_role_policy" "logs_producer_role" {
-  count = var.firehose_logs ? 1 : 0
+  count  = var.firehose_logs ? 1 : 0
   name   = "${var.name}-logs-producer-role"
   role   = try(aws_iam_role.logs_producer_role[0].name, "")
   policy = data.aws_iam_policy_document.logs_producer_role.json
@@ -83,13 +83,13 @@ data "aws_iam_policy_document" "metrics_producer_role_assume" {
 }
 
 resource "aws_iam_role" "metrics_producer_role" {
-  count = var.firehose_metrics ? 1 : 0
+  count              = var.firehose_metrics ? 1 : 0
   name               = "${var.name}-metrics-producer-role"
   assume_role_policy = data.aws_iam_policy_document.metrics_producer_role_assume.json
 }
 
 resource "aws_iam_role_policy" "metrics_producer_role" {
-  count = var.firehose_metrics ? 1 : 0
+  count  = var.firehose_metrics ? 1 : 0
   name   = "${var.name}-metrics-producer-role"
   role   = try(aws_iam_role.metrics_producer_role[0].name, "")
   policy = data.aws_iam_policy_document.metrics_producer_role.json
@@ -128,6 +128,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed_access" {
     id     = "delete"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_expiration {
       noncurrent_days = var.s3_access_logs_retention_days
     }
@@ -140,7 +142,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed_access" {
 
 
 resource "aws_s3_bucket_logging" "failed_access" {
-  bucket = aws_s3_bucket.failed_access.id
+  bucket        = aws_s3_bucket.failed_access.id
   target_bucket = aws_s3_bucket.failed_access.id
   target_prefix = "logs/"
 }
@@ -178,17 +180,17 @@ resource "aws_s3_bucket_versioning" "failed_access" {
 
 module "firehose_logs" {
   source = "./modules/firehose"
-  name = "${var.name}-logs"
-  count = var.firehose_logs ? 1 : 0
+  name   = "${var.name}-logs"
+  count  = var.firehose_logs ? 1 : 0
 
-  datadog_endpoint = var.datadog_logs_endpoint
+  datadog_endpoint   = var.datadog_logs_endpoint
   datadog_access_key = var.datadog_access_key
 
   s3_access_log_bucket = aws_s3_bucket.failed_access.id
 
   buffering_interval = var.firehose_logs_buffering_interval
-  buffering_size = var.firehose_logs_buffering_size
-  content_encoding = var.content_encoding
+  buffering_size     = var.firehose_logs_buffering_size
+  content_encoding   = var.content_encoding
 
   role_arn = aws_iam_role.firehose_role.arn
 
@@ -197,18 +199,18 @@ module "firehose_logs" {
 
 module "firehose_metrics" {
   source = "./modules/firehose"
-  name = "${var.name}-metrics"
-  count = var.firehose_metrics ? 1 : 0
+  name   = "${var.name}-metrics"
+  count  = var.firehose_metrics ? 1 : 0
 
-  datadog_endpoint = var.datadog_metrics_endpoint
+  datadog_endpoint   = var.datadog_metrics_endpoint
   datadog_access_key = var.datadog_access_key
 
   s3_access_log_bucket = aws_s3_bucket.failed_access.id
 
   buffering_interval = var.firehose_metrics_buffering_interval
-  buffering_size = var.firehose_metrics_buffering_size
-  content_encoding = var.content_encoding
+  buffering_size     = var.firehose_metrics_buffering_size
+  content_encoding   = var.content_encoding
 
-  role_arn = aws_iam_role.firehose_role.arn
+  role_arn          = aws_iam_role.firehose_role.arn
   s3_retention_days = var.s3_metrics_failed_retention_days
 }
