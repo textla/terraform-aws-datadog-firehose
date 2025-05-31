@@ -22,18 +22,20 @@ data "aws_region" "current" {}
 
 # Logs Producer
 data "aws_iam_policy_document" "logs_producer_role" {
+  count = var.firehose_logs ? 1 : 0
   statement {
     actions = [
       "firehose:PutRecord",
       "firehose:PutRecordBatch"
     ]
     resources = [
-      try(module.firehose_logs[0].firehose_delivery_stream_arn, ""),
+      module.firehose_logs[0].firehose_delivery_stream_arn
     ]
   }
 }
 
 data "aws_iam_policy_document" "logs_producer_role_assume" {
+  count = var.firehose_logs ? 1 : 0
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -47,31 +49,33 @@ data "aws_iam_policy_document" "logs_producer_role_assume" {
 resource "aws_iam_role" "logs_producer_role" {
   count              = var.firehose_logs ? 1 : 0
   name               = "${var.name}-logs-producer-role"
-  assume_role_policy = data.aws_iam_policy_document.logs_producer_role_assume.json
+  assume_role_policy = data.aws_iam_policy_document.logs_producer_role_assume[0].json
 }
 
 resource "aws_iam_role_policy" "logs_producer_role" {
   count  = var.firehose_logs ? 1 : 0
   name   = "${var.name}-logs-producer-role"
-  role   = try(aws_iam_role.logs_producer_role[0].name, "")
-  policy = data.aws_iam_policy_document.logs_producer_role.json
+  role   = aws_iam_role.logs_producer_role[0].name
+  policy = data.aws_iam_policy_document.logs_producer_role[0].json
 }
 
 # Metrics Producer
 data "aws_iam_policy_document" "metrics_producer_role" {
 
+  count = var.firehose_metrics ? 1 : 0
   statement {
     actions = [
       "firehose:PutRecord",
       "firehose:PutRecordBatch"
     ]
     resources = [
-      try(module.firehose_metrics[0].firehose_delivery_stream_arn, ""),
+      module.firehose_metrics[0].firehose_delivery_stream_arn
     ]
   }
 }
 
 data "aws_iam_policy_document" "metrics_producer_role_assume" {
+  count = var.firehose_metrics ? 1 : 0
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -85,14 +89,14 @@ data "aws_iam_policy_document" "metrics_producer_role_assume" {
 resource "aws_iam_role" "metrics_producer_role" {
   count              = var.firehose_metrics ? 1 : 0
   name               = "${var.name}-metrics-producer-role"
-  assume_role_policy = data.aws_iam_policy_document.metrics_producer_role_assume.json
+  assume_role_policy = data.aws_iam_policy_document.metrics_producer_role_assume[0].json
 }
 
 resource "aws_iam_role_policy" "metrics_producer_role" {
   count  = var.firehose_metrics ? 1 : 0
   name   = "${var.name}-metrics-producer-role"
-  role   = try(aws_iam_role.metrics_producer_role[0].name, "")
-  policy = data.aws_iam_policy_document.metrics_producer_role.json
+  role   = aws_iam_role.metrics_producer_role[0].name
+  policy = data.aws_iam_policy_document.metrics_producer_role[0].json
 }
 
 data "aws_caller_identity" "current" {}
