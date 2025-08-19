@@ -112,5 +112,5 @@ variable "backup_all_data_to_s3" {
 variable "glacier_retention_days" {
   description = "Retention period for logs in Glacier storage in days. Set to 0 to disable Glacier transition and keep all logs in Standard storage."
   type        = number
-  default     = 365
+  default     = 0
 }
