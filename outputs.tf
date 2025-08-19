@@ -14,14 +14,14 @@ output "metrics_producer_role" {
   value = try(aws_iam_role.metrics_producer_role[0].arn, "")
 }
 
-output "all_logs_bucket_name" {
-  description = "Name of the all logs S3 bucket (when backup_all_logs_to_s3 is enabled)"
-  value       = var.firehose_logs ? module.firehose_logs[0].all_logs_bucket_name : ""
+output "all_data_bucket_name" {
+  description = "Name of the all data S3 bucket (when backup_all_data_to_s3 is enabled)"
+  value       = var.firehose_logs ? module.firehose_logs[0].all_data_bucket_name : ""
 }
 
-output "all_logs_bucket_arn" {
-  description = "ARN of the all logs S3 bucket (when backup_all_logs_to_s3 is enabled)"
-  value       = var.firehose_logs ? module.firehose_logs[0].all_logs_bucket_arn : ""
+output "all_data_bucket_arn" {
+  description = "ARN of the all data S3 bucket (when backup_all_data_to_s3 is enabled)"
+  value       = var.firehose_logs ? module.firehose_logs[0].all_data_bucket_arn : ""
 }
 
 output "failed_access_bucket_name" {
