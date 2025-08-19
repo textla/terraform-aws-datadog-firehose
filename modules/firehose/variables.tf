@@ -47,3 +47,15 @@ variable "s3_retention_days" {
   type        = number
   default     = 1
 }
+
+variable "backup_all_logs_to_s3" {
+  description = "Enable backing up all logs (successful and failed) to S3. If false, only failed logs will be backed up."
+  type        = bool
+  default     = false
+}
+
+variable "glacier_retention_days" {
+  description = "Retention period for logs in Glacier storage in days. Set to 0 to disable Glacier transition and keep all logs in Standard storage."
+  type        = number
+  default     = 365
+}
