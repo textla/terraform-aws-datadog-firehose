@@ -14,10 +14,10 @@ output "all_logs_bucket_arn" {
 
 output "failed_bucket_name" {
   description = "Name of the failed S3 bucket"
-  value       = aws_s3_bucket.failed.id
+  value       = var.backup_all_logs_to_s3 ? "" : aws_s3_bucket.failed[0].id
 }
 
 output "failed_bucket_arn" {
   description = "ARN of the failed S3 bucket"
-  value       = aws_s3_bucket.failed.arn
+  value       = var.backup_all_logs_to_s3 ? "" : aws_s3_bucket.failed[0].arn
 }

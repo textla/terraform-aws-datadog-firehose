@@ -1,3 +1,39 @@
+# Moved blocks for backward compatibility - prevent deletion of existing resources
+moved {
+  from = aws_kms_key.failed
+  to   = aws_kms_key.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket.failed
+  to   = aws_s3_bucket.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket_server_side_encryption_configuration.failed
+  to   = aws_s3_bucket_server_side_encryption_configuration.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket_lifecycle_configuration.failed
+  to   = aws_s3_bucket_lifecycle_configuration.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket_logging.failed
+  to   = aws_s3_bucket_logging.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket_versioning.failed
+  to   = aws_s3_bucket_versioning.failed[0]
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.failed
+  to   = aws_s3_bucket_public_access_block.failed[0]
+}
+
 data "aws_caller_identity" "current" {}
 
 resource "aws_kms_key" "stream" {
@@ -41,7 +77,7 @@ resource "aws_kinesis_firehose_delivery_stream" "kinesis_firehose_stream_logs" {
 
     s3_configuration {
       role_arn            = var.role_arn
-      bucket_arn          = var.backup_all_logs_to_s3 ? aws_s3_bucket.all_logs[0].arn : aws_s3_bucket.failed.arn
+      bucket_arn          = var.backup_all_logs_to_s3 ? aws_s3_bucket.all_logs[0].arn : aws_s3_bucket.failed[0].arn
       prefix              = var.backup_all_logs_to_s3 ? "successful/" : null
       error_output_prefix = var.backup_all_logs_to_s3 ? "failed/" : null
     }
@@ -53,12 +89,14 @@ resource "aws_kinesis_firehose_delivery_stream" "kinesis_firehose_stream_logs" {
 }
 
 resource "aws_kms_key" "failed" {
+  count               = var.backup_all_logs_to_s3 ? 0 : 1
   description         = "${var.name}-failed"
   enable_key_rotation = true
-  policy              = data.aws_iam_policy_document.failed.json
+  policy              = data.aws_iam_policy_document.failed[0].json
 }
 
 data "aws_iam_policy_document" "failed" {
+  count = var.backup_all_logs_to_s3 ? 0 : 1
   statement {
     sid = "CMKOwnerPolicy"
 
@@ -73,21 +111,24 @@ data "aws_iam_policy_document" "failed" {
 }
 
 resource "aws_s3_bucket" "failed" {
+  count  = var.backup_all_logs_to_s3 ? 0 : 1
   bucket = "${data.aws_caller_identity.current.account_id}-${var.name}-failed"
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "failed" {
-  bucket = aws_s3_bucket.failed.bucket
+  count  = var.backup_all_logs_to_s3 ? 0 : 1
+  bucket = aws_s3_bucket.failed[0].bucket
   rule {
     apply_server_side_encryption_by_default {
-      kms_master_key_id = aws_kms_key.failed.arn
+      kms_master_key_id = aws_kms_key.failed[0].arn
       sse_algorithm     = "aws:kms"
     }
   }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "failed" {
-  bucket = aws_s3_bucket.failed.id
+  count  = var.backup_all_logs_to_s3 ? 0 : 1
+  bucket = aws_s3_bucket.failed[0].id
 
   rule {
     id     = "failed_logs_lifecycle"
@@ -123,20 +164,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "failed" {
 }
 
 resource "aws_s3_bucket_logging" "failed" {
-  bucket        = aws_s3_bucket.failed.id
+  count         = var.backup_all_logs_to_s3 ? 0 : 1
+  bucket        = aws_s3_bucket.failed[0].id
   target_bucket = var.s3_access_log_bucket
   target_prefix = "logs/"
 }
 
 resource "aws_s3_bucket_versioning" "failed" {
-  bucket = aws_s3_bucket.failed.id
+  count  = var.backup_all_logs_to_s3 ? 0 : 1
+  bucket = aws_s3_bucket.failed[0].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_bucket_public_access_block" "failed" {
-  bucket = aws_s3_bucket.failed.id
+  count  = var.backup_all_logs_to_s3 ? 0 : 1
+  bucket = aws_s3_bucket.failed[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -177,37 +221,33 @@ resource "aws_s3_bucket_lifecycle_configuration" "all_logs" {
   bucket = aws_s3_bucket.all_logs[0].id
 
   # Rule for successful logs
-  rule {
-    id     = "successful_logs"
-    status = "Enabled"
+  dynamic "rule" {
+    for_each = var.glacier_retention_days > 0 ? [1] : []
+    content {
+      id     = "successful_logs"
+      status = "Enabled"
 
-    filter {
-      prefix = "successful/"
-    }
+      filter {
+        prefix = "successful/"
+      }
 
-    # Conditional Glacier transition for successful logs
-    dynamic "transition" {
-      for_each = var.glacier_retention_days > 0 ? [1] : []
-      content {
-        days          = 1
+      transition {
+        days          = 0
         storage_class = "GLACIER"
       }
-    }
 
-    dynamic "noncurrent_version_transition" {
-      for_each = var.glacier_retention_days > 0 ? [1] : []
-      content {
-        noncurrent_days = 1
+      noncurrent_version_transition {
+        noncurrent_days = 0
         storage_class   = "GLACIER"
       }
-    }
 
-    noncurrent_version_expiration {
-      noncurrent_days = var.glacier_retention_days > 0 ? var.glacier_retention_days : var.s3_retention_days
-    }
+      noncurrent_version_expiration {
+        noncurrent_days = var.glacier_retention_days
+      }
 
-    expiration {
-      days = var.glacier_retention_days > 0 ? var.glacier_retention_days : var.s3_retention_days
+      expiration {
+        days = var.glacier_retention_days
+      }
     }
   }
 
