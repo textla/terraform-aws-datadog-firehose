@@ -91,26 +91,37 @@ variable "s3_metrics_failed_retention_days" {
   default     = 14
 }
 
+variable "s3_metrics_backup_all" {
+  description = "Enable backing up all metrics data (successful and failed) to S3 with Glacier storage. If false, only failed metrics will be backed up."
+  type        = bool
+  default     = false
+}
+
+variable "s3_metrics_glacier_retention_days" {
+  description = "Retention period for metrics in Glacier storage in days. Set to 0 to disable Glacier transition and keep all metrics in Standard storage."
+  type        = number
+  default     = 0
+}
+
 variable "s3_logs_failed_retention_days" {
   description = "S3 Logs Failed Bucket Retention in Days"
   type        = number
   default     = 14
 }
 
-variable "s3_access_logs_retention_days" {
-  description = "S3 Failed Buckets Access Logs Retention in Days"
-  type        = number
-  default     = 1
-}
-
-variable "backup_all_data_to_s3" {
-  description = "Enable backing up all data (successful and failed) to S3 with Glacier storage. If false, only failed data will be backed up."
+variable "s3_logs_backup_all" {
+  description = "Enable backing up all logs data (successful and failed) to S3 with Glacier storage. If false, only failed logs will be backed up."
   type        = bool
   default     = false
 }
 
-variable "glacier_retention_days" {
+variable "s3_logs_glacier_retention_days" {
   description = "Retention period for logs in Glacier storage in days. Set to 0 to disable Glacier transition and keep all logs in Standard storage."
   type        = number
   default     = 0
+}
+variable "s3_access_logs_retention_days" {
+  description = "S3 Failed Buckets Access Logs Retention in Days"
+  type        = number
+  default     = 1
 }

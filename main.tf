@@ -194,8 +194,8 @@ module "firehose_logs" {
   role_arn = aws_iam_role.firehose_role.arn
 
   s3_retention_days      = var.s3_logs_failed_retention_days
-  glacier_retention_days = var.glacier_retention_days
-  backup_all_data_to_s3  = var.backup_all_data_to_s3
+  glacier_retention_days = var.s3_logs_glacier_retention_days
+  backup_all_data_to_s3  = var.s3_logs_backup_all
 }
 
 module "firehose_metrics" {
@@ -214,6 +214,6 @@ module "firehose_metrics" {
 
   role_arn               = aws_iam_role.firehose_role.arn
   s3_retention_days      = var.s3_metrics_failed_retention_days
-  glacier_retention_days = var.glacier_retention_days
-  backup_all_data_to_s3  = var.backup_all_data_to_s3
+  glacier_retention_days = var.s3_metrics_glacier_retention_days
+  backup_all_data_to_s3  = var.s3_metrics_backup_all
 }
