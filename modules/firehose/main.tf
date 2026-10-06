@@ -116,6 +116,36 @@ resource "aws_s3_bucket_versioning" "failed" {
   }
 }
 
+data "aws_iam_policy_document" "failed_bucket" {
+  # Deny any request not made over TLS, on the bucket and its objects
+  # (Vanta: "S3 buckets allow only HTTPS traffic").
+  statement {
+    sid     = "DenyInsecureTransport"
+    effect  = "Deny"
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.failed.arn,
+      "${aws_s3_bucket.failed.arn}/*",
+    ]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "failed" {
+  bucket = aws_s3_bucket.failed.id
+  policy = data.aws_iam_policy_document.failed_bucket.json
+}
+
 resource "aws_s3_bucket_public_access_block" "failed" {
   bucket = aws_s3_bucket.failed.id
 
