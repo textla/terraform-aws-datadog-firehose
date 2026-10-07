@@ -1,0 +1,36 @@
+# Terraform
+# .terraform.lock.hcl is not ignored: module repos commit it.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+*.tfplan
+
+# Variable files (can contain secrets)
+*.tfvars
+*.tfvars.json
+
+# Override files (local-only experimentation)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc
+
+# Environment
+.env
+
+# OS
+.DS_Store
+
+# Agents
+.mcp.json
+.pr-review/
+.worktrees/
+docs/superpowers
+llms.txt
