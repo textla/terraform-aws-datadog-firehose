@@ -1,0 +1,177 @@
+# Complete CI workflow for Terraform module repos. common-repo delivers this
+# file to consumers unchanged, and it is this repo's own CI too: the `self:`
+# block of .common-repo.yaml excludes the generic ci.yaml of
+# common-repo/upstream, so the setup actions and their pinned versions run
+# here on every pull request before a consumer gets them. Consumers do not
+# get the generic ci.yaml stub from common-repo/semantic-release either (see
+# https://github.com/common-repo/semantic-release/issues/17). The
+# semantic-release release.yaml calls this workflow through workflow_call, so
+# the `on:` block must keep that trigger. release.yaml runs on every push to
+# main and calls this workflow before it releases, so this workflow has no
+# push trigger of its own: one would run the same jobs a second time.
+#
+# The job names Lint and Test are the required status checks of the
+# textla/tf-github repo ruleset. Do not rename them.
+#
+# The Lint job and the Pre-Commit job (pre-commit.yaml) both install the
+# toolchain and run prek on every PR. That is intended: the ruleset requires
+# the check named Lint, and the common-repo/pre-commit stub supplies the
+# Pre-Commit workflow. Do not remove one of them.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-module-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      # tflint --init downloads plugins from GitHub releases. The token keeps
+      # the download out of the anonymous API rate limit.
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
+        with:
+          github_token: ${{ github.token }}
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.75.0
+
+      # Keep this pin equal to the one in pre-commit.yaml. terraform-docs
+      # output differs between versions, and a different version makes the
+      # terraform_docs hook rewrite README.md. script/bootstrap warns when the
+      # local version differs from this pin.
+      - name: Install terraform-docs
+        env:
+          TERRAFORM_DOCS_VERSION: "0.24.0"
+          TERRAFORM_DOCS_SHA256: "9005daf969de0b50134493a2c00078b49f5f5b39d021cda7c89bf4d4f3d776d3"
+        run: |
+          set -euo pipefail
+          archive="terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          curl -fsSLo "${archive}" "https://github.com/terraform-docs/terraform-docs/releases/download/v${TERRAFORM_DOCS_VERSION}/${archive}"
+          echo "${TERRAFORM_DOCS_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" terraform-docs
+          sudo install -m 0755 terraform-docs /usr/local/bin/terraform-docs
+          rm -f "${archive}" terraform-docs
+          terraform-docs --version
+
+      - uses: j178/prek-action@53276d8b0d10f8b6672aa85b4588c6921d0370cc # v2
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      # The upstream of the consumers (textla/cr-terraform-module) is
+      # private: the checkout token is repo-local and cannot read sibling
+      # repos, so common-repo needs an app token in git before it fetches the
+      # upstream. The secret names and the owner are literal, not
+      # __COMMON_REPO__*__ template variables, because template substitution
+      # is lost on merged files and this file is kept consistent with them;
+      # see https://github.com/common-repo/common-repo/issues/356.
+      # client-id takes the App ID or the App Client ID; TEXTLA_BOT_APP_ID
+      # holds the App ID. The action deprecated app-id in v3.1.0.
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.TEXTLA_BOT_APP_ID }}
+          private-key: ${{ secrets.TEXTLA_BOT_PK }}
+          owner: textla
+          repositories: cr-terraform-module
+          permission-contents: read
+
+      # Scoped to the textla org so that the public common-repo/* upstreams
+      # clone anonymously.
+      - name: Configure git auth for private upstreams
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config --global \
+            url."https://x-access-token:${APP_TOKEN}@github.com/textla/".insteadOf \
+            "https://github.com/textla/"
+
+      # Pinned: a change in the apply output of a newer common-repo would
+      # make `common-repo diff` fail in every consumer at once. Keep this
+      # pin equal to COMMON_REPO_VERSION in the root script/test of
+      # cr-terraform-module.
+      - uses: common-repo/setup-common-repo@887d2b31e6678fb650d1b1b6fb6097afa5528310 # v1
+        with:
+          version: v0.37.7
+
+      - name: Validate configuration
+        run: common-repo validate
+
+      # `common-repo diff` exits 1 when a managed file differs from the
+      # result of `common-repo apply`. `common-repo apply --dry-run` exits 0
+      # in that case, so it cannot be the check.
+      - name: Check managed files
+        run: common-repo diff
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      # script/lint runs tflint --init; see the Lint job.
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
+        with:
+          github_token: ${{ github.token }}
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.75.0
+
+      # In textla/cr-terraform-module, script/test applies the baseline to a
+      # scratch consumer and runs the delivered script/test and prek on a
+      # sample module, which needs terraform-docs and prek as well. The two
+      # steps run only there; a consumer's script/test needs the three tools
+      # above, and the steps are skipped.
+      - name: Install terraform-docs (cr-terraform-module only)
+        if: github.repository == 'textla/cr-terraform-module'
+        env:
+          TERRAFORM_DOCS_VERSION: "0.24.0"
+          TERRAFORM_DOCS_SHA256: "9005daf969de0b50134493a2c00078b49f5f5b39d021cda7c89bf4d4f3d776d3"
+        run: |
+          set -euo pipefail
+          archive="terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          curl -fsSLo "${archive}" "https://github.com/terraform-docs/terraform-docs/releases/download/v${TERRAFORM_DOCS_VERSION}/${archive}"
+          echo "${TERRAFORM_DOCS_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" terraform-docs
+          sudo install -m 0755 terraform-docs /usr/local/bin/terraform-docs
+          rm -f "${archive}" terraform-docs
+          terraform-docs --version
+
+      - name: Install prek (cr-terraform-module only)
+        if: github.repository == 'textla/cr-terraform-module'
+        uses: j178/prek-action@53276d8b0d10f8b6672aa85b4588c6921d0370cc # v2
+        with:
+          install-only: "true"
+
+      - name: Run tests
+        run: |
+          [ ! -x "script/test" ] || script/test

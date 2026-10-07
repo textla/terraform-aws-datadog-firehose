@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# script/test — Run tests and validation
+#
+# Runs terraform validate in each directory that has .tf files, runs
+# terraform test in each directory that has *.tftest.hcl or *.tftest.json
+# files (in the directory or in its tests/ subdirectory), then lints.
+# This is the single "is everything OK?" command.
+# Exits 0 with a message when terraform is not installed. The CI Test job
+# installs the toolchain before it runs this script; run script/bootstrap
+# locally.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Testing..."
+
+if ! command -v terraform &>/dev/null; then
+  echo "  terraform not found, skipping terraform checks"
+  echo "  (Run script/bootstrap to install dev tools)"
+  exit 0
+fi
+
+init_dir() {
+  terraform -chdir="$1" init -input=false -backend=false >/dev/null
+}
+
+# Find all directories containing .tf files (excluding .terraform)
+modules=()
+while IFS= read -r dir; do
+  modules+=("$dir")
+done < <(find . -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)
+
+if [ ${#modules[@]} -eq 0 ]; then
+  echo "  No .tf files found, skipping terraform validate"
+else
+  for dir in "${modules[@]}"; do
+    echo "  Validating $dir..."
+    init_dir "$dir"
+    terraform -chdir="$dir" validate
+  done
+fi
+
+# Find all directories with test files, in the directory itself or in its
+# tests/ subdirectory (the default locations of terraform test).
+test_dirs=()
+while IFS= read -r dir; do
+  test_dirs+=("$dir")
+done < <(find . \( -name '*.tftest.hcl' -o -name '*.tftest.json' \) -not -path '*/.terraform/*' -exec dirname {} \; | sed -e 's#/tests$##' | sort -u)
+
+if [ ${#test_dirs[@]} -eq 0 ]; then
+  echo "  No *.tftest.hcl or *.tftest.json files found, skipping terraform test"
+else
+  for dir in "${test_dirs[@]}"; do
+    echo "  Testing $dir..."
+    # The validate loop initialized every directory that has .tf files.
+    initialized=false
+    for module in ${modules[@]+"${modules[@]}"}; do
+      [ "$module" = "$dir" ] && initialized=true && break
+    done
+    [ "$initialized" = true ] || init_dir "$dir"
+    terraform -chdir="$dir" test
+  done
+fi
+
+# Run linters
+"$(dirname "$0")/lint"
+
+echo "==> All tests passed!"

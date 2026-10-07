@@ -1,0 +1,53 @@
+minimum_prek_version: 0.3.8
+default_install_hook_types:
+- pre-commit
+- commit-msg
+default_stages:
+- pre-commit
+repos:
+- repo: https://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.96.3
+  hooks:
+  - id: terraform_fmt
+  - id: terraform_validate
+  - id: terraform_tflint
+    args:
+    - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+  - id: terraform_trivy
+    args:
+    - --args=--tf-exclude-downloaded-modules
+    - --args=--skip-dirs=**/.terraform
+  - id: terraform_docs
+    args:
+    - --hook-config=--path-to-file=README.md
+    - --hook-config=--add-to-existing-file=true
+    - --hook-config=--create-file-if-not-exist=true
+- repo: https://github.com/compilerla/conventional-pre-commit
+  rev: v3.6.0
+  hooks:
+  - id: conventional-pre-commit
+    stages:
+    - commit-msg
+- repo: builtin
+  hooks:
+  - id: trailing-whitespace
+    exclude: ^(CHANGELOG\.md|RELEASES\.md|CLAUDE\.md|AGENTS\.md|llms\.txt|\.claude/.*|\.cursor/.*|\.github/copilot-instructions\.md)$
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: end-of-file-fixer
+    exclude: ^(CHANGELOG\.md|RELEASES\.md|CLAUDE\.md|AGENTS\.md|llms\.txt|\.claude/.*|\.cursor/.*|\.github/copilot-instructions\.md)$
+  - id: fix-byte-order-marker
+    exclude: ^(CHANGELOG\.md|RELEASES\.md|CLAUDE\.md|AGENTS\.md|llms\.txt|\.claude/.*|\.cursor/.*|\.github/copilot-instructions\.md)$
+  - id: check-json
+  - id: check-json5
+  - id: check-toml
+  - id: check-yaml
+    args:
+    - --allow-multiple-documents
+  - id: check-merge-conflict
+  - id: check-xml
+  - id: mixed-line-ending
+    exclude: ^(CHANGELOG\.md|RELEASES\.md|CLAUDE\.md|AGENTS\.md|llms\.txt|\.claude/.*|\.cursor/.*|\.github/copilot-instructions\.md)$
+  - id: check-symlinks
+  - id: detect-private-key
+  - id: check-executables-have-shebangs

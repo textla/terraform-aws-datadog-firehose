@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# script/lint — Run all linters
+#
+# Runs terraform fmt check, tflint, and trivy on every module directory.
+# Exits non-zero on first failure.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Linting..."
+
+echo "  Checking terraform formatting..."
+terraform fmt -check -recursive
+
+# --recursive runs tflint in each directory that has .tf files and skips
+# hidden directories such as .terraform. The absolute --config path applies
+# one configuration to every directory.
+echo "  Running tflint..."
+tflint_config="$(pwd)/.tflint.hcl"
+tflint --init --recursive --config="$tflint_config"
+tflint --recursive --config="$tflint_config"
+
+# Modules downloaded into .terraform/modules are not this repo's code:
+# --tf-exclude-downloaded-modules drops their Terraform results, and
+# --skip-dirs keeps trivy out of the .terraform directories, which can hold
+# other files that trivy scans (for example the Kubernetes manifests in the
+# examples of a module). trivy.yaml sets the same options for a scan from
+# the repo root.
+echo "  Running trivy..."
+trivy config --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs '**/.terraform' .
+
+echo "==> All linters passed!"

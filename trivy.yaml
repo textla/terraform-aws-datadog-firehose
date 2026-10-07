@@ -1,0 +1,11 @@
+# trivy options for a scan from the repo root. script/lint and the
+# terraform_trivy hook pass the same options as flags, because the hook runs
+# trivy in each module directory and reads this file only in the repo root.
+scan:
+  # Downloaded modules are not this repo's code. They can hold files that
+  # trivy scans, such as the Kubernetes manifests in the examples of a module.
+  skip-dirs:
+    - "**/.terraform"
+misconfiguration:
+  terraform:
+    exclude-downloaded-modules: true
