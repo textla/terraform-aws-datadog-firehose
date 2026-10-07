@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# script/update — Update project dependencies
+#
+# Upgrades terraform providers and reports newer cr-terraform-module
+# releases. The pre-commit hooks are managed files from cr-terraform-module:
+# their revisions change with a baseline release, not with prek autoupdate,
+# which would make the Validate check fail on the edited file.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Updating dependencies..."
+
+# Upgrade terraform providers if .tf files exist
+if [ -n "$(find . -maxdepth 2 -name '*.tf' -not -path '*/.terraform/*' -print -quit)" ]; then
+  echo "  Upgrading terraform providers..."
+  terraform init -upgrade -input=false
+else
+  echo "  No .tf files found, skipping terraform init -upgrade"
+fi
+
+# Report newer baseline releases. Apply one with:
+#   common-repo update
+#   rm .pre-commit-config.yaml .github/workflows/pre-commit.yaml
+#   common-repo apply
+# apply merges the two existing files with the new ones, so a changed hook
+# or step would land next to its old form; see the README of
+# textla/cr-terraform-module.
+if command -v common-repo &>/dev/null; then
+  echo "  Checking for cr-terraform-module updates..."
+  common-repo check --updates
+else
+  echo "  Warning: common-repo not found. Run script/bootstrap first." >&2
+fi
+
+echo "==> Done!"

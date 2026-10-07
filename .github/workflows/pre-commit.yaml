@@ -1,0 +1,42 @@
+name: Lint
+on:
+  pull_request:
+    branches:
+    - main
+  workflow_call: null
+permissions:
+  contents: read
+concurrency:
+  group: common-repo/pre-commit/lint/pre-commit-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pre-commit:
+    name: Pre-Commit
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+    - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+      with:
+        terraform_wrapper: false
+    - uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6
+      with:
+        github_token: ${{ github.token }}
+    - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567
+      with:
+        version: v0.75.0
+    - name: Install terraform-docs
+      env:
+        TERRAFORM_DOCS_VERSION: 0.24.0
+        TERRAFORM_DOCS_SHA256: 9005daf969de0b50134493a2c00078b49f5f5b39d021cda7c89bf4d4f3d776d3
+      run: |
+        set -euo pipefail
+        archive="terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+        curl -fsSLo "${archive}" "https://github.com/terraform-docs/terraform-docs/releases/download/v${TERRAFORM_DOCS_VERSION}/${archive}"
+        echo "${TERRAFORM_DOCS_SHA256}  ${archive}" | sha256sum -c -
+        tar -xzf "${archive}" terraform-docs
+        sudo install -m 0755 terraform-docs /usr/local/bin/terraform-docs
+        rm -f "${archive}" terraform-docs
+        terraform-docs --version
+    - uses: j178/prek-action@53276d8b0d10f8b6672aa85b4588c6921d0370cc
