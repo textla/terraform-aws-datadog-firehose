@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# script/setup — Configure the project for development
+#
+# Runs terraform init and installs pre-commit hooks.
+# Idempotent — safe to re-run.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Setting up project..."
+
+# Initialize terraform if .tf files exist
+if [ -n "$(find . -maxdepth 2 -name '*.tf' -not -path '*/.terraform/*' -print -quit)" ]; then
+  echo "  Initializing terraform..."
+  terraform init -input=false
+else
+  echo "  No .tf files found, skipping terraform init"
+fi
+
+# Install pre-commit hooks
+if command -v prek &>/dev/null; then
+  echo "  Installing pre-commit hooks..."
+  prek install
+else
+  echo "  Warning: prek not found. Run script/bootstrap first." >&2
+fi
+
+echo "==> Done!"

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# script/bootstrap — Install development dependencies
+#
+# Installs: terraform, tflint, trivy, terraform-docs, prek, common-repo
+# Idempotent — safe to re-run.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Installing development dependencies..."
+
+command_exists() {
+  command -v "$1" &>/dev/null
+}
+
+installed() {
+  echo "  [ok] $1 already installed"
+}
+
+installing() {
+  echo "  [..] Installing $1..."
+}
+
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "Error: Only macOS is supported. CI uses dedicated GitHub Actions." >&2
+  exit 1
+fi
+
+if ! command_exists brew; then
+  echo "Error: Homebrew is required. Install from https://brew.sh" >&2
+  exit 1
+fi
+
+for tool in terraform tflint trivy terraform-docs prek common-repo; do
+  if command_exists "$tool"; then
+    installed "$tool"
+  else
+    installing "$tool"
+    case "$tool" in
+      terraform)      brew install hashicorp/tap/terraform ;;
+      prek)           brew install j178/tap/prek ;;
+      common-repo)    brew install common-repo/tap/common-repo ;;
+      *)              brew install "$tool" ;;
+    esac
+  fi
+done
+
+# CI pins terraform-docs in .github/workflows/ci.yaml. terraform-docs output
+# differs between versions, and the terraform_docs hook rewrites README.md
+# when the local version is not the CI version.
+ci_pin="$(sed -n 's/.*TERRAFORM_DOCS_VERSION: *"\([^"]*\)".*/\1/p' .github/workflows/ci.yaml 2>/dev/null | head -n 1 || true)"
+local_version="$(terraform-docs --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
+if [ -n "$ci_pin" ] && [ "$local_version" != "$ci_pin" ]; then
+  echo "  [warn] terraform-docs ${local_version:-unknown} is installed, but CI pins ${ci_pin}." >&2
+  echo "         Install terraform-docs ${ci_pin} so that the terraform_docs hook writes the same README.md as CI." >&2
+fi
+
+echo "==> Done!"
