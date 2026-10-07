@@ -31,8 +31,9 @@ variable "firehose_logs" {
   default     = true
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "firehose_logs_encryption_key_arn" {
-  description = "SSE Key ARN"
+  description = "Deprecated, unused: the module creates its own KMS keys. Kept so existing callers don't break. SSE Key ARN"
   type        = string
   default     = null
 }
@@ -49,8 +50,9 @@ variable "firehose_logs_buffering_interval" {
   default     = 60
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "firehose_logs_s3_encryption_key_arn" {
-  description = "S3 Failed Bucket SSE Key ARN"
+  description = "Deprecated, unused: the module creates its own KMS keys. Kept so existing callers don't break. S3 Failed Bucket SSE Key ARN"
   type        = string
   default     = null
 }
@@ -61,8 +63,9 @@ variable "firehose_metrics" {
   default     = true
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "firehose_metrics_encryption_key_arn" {
-  description = "SSE Key ARN"
+  description = "Deprecated, unused: the module creates its own KMS keys. Kept so existing callers don't break. SSE Key ARN"
   type        = string
   default     = null
 }
@@ -79,8 +82,9 @@ variable "firehose_metrics_buffering_interval" {
   default     = 60
 }
 
+# tflint-ignore: terraform_unused_declarations
 variable "firehose_metrics_s3_encryption_key_arn" {
-  description = "S3 Failed Bucket SSE Key ARN"
+  description = "Deprecated, unused: the module creates its own KMS keys. Kept so existing callers don't break. S3 Failed Bucket SSE Key ARN"
   type        = string
   default     = null
 }
